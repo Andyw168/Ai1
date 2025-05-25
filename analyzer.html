@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI 表情辨識系統（修正版）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.9.5/dist/face-api.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  <style>
+    body { font-family: 'Microsoft JhengHei', sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); padding: 20px; color: #2c3e50; }
+    .container { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+    video { width: 100%; border-radius: 10px; }
+    .emotion-display { text-align: center; margin-top: 20px; }
+    .current-emotion { font-size: 3em; animation: pulse 2s infinite; }
+    .emotion-text { font-size: 1.5em; margin: 10px 0; }
+    .warm-message { background: #fef4f4; padding: 15px; border-radius: 10px; font-size: 1.2em; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 表情辨識系統（分析對方）</h1>
+    <video id="remoteVideo" autoplay playsinline muted></video>
+    <div class="emotion-display">
+      <div class="current-emotion" id="currentEmoji">😊</div>
+      <div class="emotion-text" id="emotionText">等待偵測中...</div>
+      <div class="warm-message" id="warmMessage">系統正在啟動與辨識中...</div>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('remoteVideo');
+    const emojiEl = document.getElementById('currentEmoji');
+    const textEl = document.getElementById('emotionText');
+    const msgEl = document.getElementById('warmMessage');
+
+    const emotionConfig = {
+      happy: { emoji: '😊', name: '開心', messages: ['你看起來超開心耶！保持這個心情！', '笑容真燦爛！'] },
+      sad: { emoji: '😢', name: '難過', messages: ['一切都會變好的喔，加油！', '給你一個溫暖的擁抱 🫂'] },
+      angry: { emoji: '😠', name: '生氣', messages: ['別生氣啦～深呼吸一下 🌬️', '試著放下，會更輕鬆 ❤️'] },
+      surprise: { emoji: '😲', name: '驚訝', messages: ['哇！是驚喜嗎？🎉', '希望是好的驚喜喔！🌟'] },
+      fear: { emoji: '😨', name: '害怕', messages: ['不要怕，有我在這裡陪你 🤗', '勇敢一點，你很棒！'] },
+      disgust: { emoji: '🤢', name: '噁心', messages: ['不舒服嗎？先休息一下 💤'] },
+      neutral: { emoji: '😐', name: '平靜', messages: ['平靜也是一種美好 🍃', '內心寧靜最難得 🌙'] }
+    };
+
+    const peer = new Peer("analyzer-id");
+
+    peer.on("call", call => {
+      call.answer();
+      call.on("stream", stream => {
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          video.play();
+          startDetection();
+        };
+      });
+    });
+
+    async function startDetection() {
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri("https://justadudewhohacks.github.io/face-api.js/models"),
+        faceapi.nets.faceExpressionNet.loadFromUri("https://justadudewhohacks.github.io/face-api.js/models")
+      ]);
+      msgEl.innerText = "✅ 模型已載入，開始分析表情...";
+
+      setInterval(async () => {
+        const result = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions();
+        if (result && result.expressions) {
+          const sorted = Object.entries(result.expressions).sort((a, b) => b[1] - a[1]);
+          const [emotion] = sorted[0];
+          const config = emotionConfig[emotion] || emotionConfig['neutral'];
+          emojiEl.textContent = config.emoji;
+          textEl.textContent = config.name;
+          msgEl.textContent = config.messages[Math.floor(Math.random() * config.messages.length)];
+        } else {
+          textEl.textContent = "未偵測到臉部";
+          msgEl.textContent = "請確保畫面中有清楚臉部影像";
+        }
+      }, 2000);
+    }
+  </script>
+</body>
+</html>

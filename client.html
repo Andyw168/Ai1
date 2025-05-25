@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>送出鏡頭</title>
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <h2>📷 自動傳送鏡頭畫面中...</h2>
+  <video id="myVideo" autoplay muted playsinline width="320" height="240"></video>
+  <script>
+    const myVideo = document.getElementById("myVideo");
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      myVideo.srcObject = stream;
+      const peer = new Peer();
+      peer.on("open", id => {
+        peer.call("analyzer-id", stream);
+      });
+    });
+  </script>
+</body>
+</html>
