@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <title>AI 表情辨識系統（修正版 with CORS CDN）</title>
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.9.5/dist/face-api.min.js"></script>
+  <title>AI 表情辨識系統（最終可辨識版）</title>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
   <style>
     body { font-family: 'Microsoft JhengHei', sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); padding: 20px; color: #2c3e50; }
@@ -57,15 +57,23 @@
     });
 
     async function startDetection() {
-      const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
+      const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
+      console.log("🧠 載入模型中...");
       await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
         faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
       ]);
-      msgEl.innerText = "✅ 模型已載入，開始分析表情...";
+      console.log("✅ 模型載入完成");
+      msgEl.innerText = "✅ 模型載入完成，開始分析...";
 
-      setInterval(async () => {
-        const result = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions();
+      const runDetection = async () => {
+        if (!faceapi.nets.faceExpressionNet.isLoaded()) {
+          console.log("⏳ 模型尚未完全載入");
+          return;
+        }
+        const result = await faceapi
+          .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+          .withFaceExpressions();
         if (result && result.expressions) {
           const sorted = Object.entries(result.expressions).sort((a, b) => b[1] - a[1]);
           const [emotion] = sorted[0];
@@ -77,7 +85,9 @@
           textEl.textContent = "未偵測到臉部";
           msgEl.textContent = "請確保畫面中有清楚臉部影像";
         }
-      }, 2000);
+      };
+
+      setInterval(runDetection, 2000);
     }
   </script>
 </body>
